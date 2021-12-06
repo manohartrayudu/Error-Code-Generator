@@ -304,6 +304,211 @@ Cells(37, 1).Value = c
 
 
 
+End Sub
+
+
+
+
+
+'****************************************************************************************************************
+
+                                    'ERROR CODE GENERTION PROGRAM
+                                               'METHOD 3
+                                           '(using bit shifts)
+                                           
+                                           
+                                               'SUMMARY:
+                            '[.] Added two new fields "SYSTEM" and "SUBSYSTEM"
+                            '[.] Alloted bits accordingly
+                            '[.] Used left bit shift to arrange the final error_code
+                            '[X] Execution time is slightly more as compared to METHOD 2
+                            
+                            
+                                                'NOTE:
+                            '[.] Temporary error_names are hard coded based on LRU type
+                                                
+
+'****************************************************************************************************************
+
+
+
+Sub generate_error_code()
+Dim event_type
+Dim criticality
+Dim code
+Dim code_final
+Dim criticality_final
+Dim lru
+Dim lru_final
+Dim error_code
+Dim row_start As Integer
+Dim row_end As Integer
+Dim sub_system
+Dim sub_system_final
+Dim system_code
+Dim system_code_final
+
+Dim col_start As Integer
+Dim col_end As Integer
+Dim i, j As Integer
+
+Dim num
+Dim count As Integer
+
+
+Dim fso As Object, ts As Object
+Set fso = CreateObject("Scripting.FileSystemObject")
+
+Set ts = fso.CreateTextFile("Events_Definitions.h")
+ts.WriteLine "#include <Common_Definitions.h>"
+ts.WriteLine "namespace fdir_ident_t"
+ts.WriteLine "{"
+ts.WriteLine "enum fdir_events_t{"
+Set ts1 = fso.CreateTextFile("Map_Actions.h")
+ts1.WriteLine "#include <Events_Definitions.h>"
+ts1.WriteLine "Uint32_t error_code_and_action[count][2]={"
+
+
+row_start = 10
+row_end = 33
+
+
+For i = row_start To row_end
+
+
+        '*********************Events Part******************************
+        If Cells(i, 6).Value = "M-event" Then
+            event_type = 1
+        ElseIf Cells(i, 6).Value = "I-event" Then
+            event_type = 2
+        ElseIf Cells(i, 6).Value = "R-event" Then
+            event_type = 4
+        End If
+        error_code = error_code Or event_type
+        '**************************************************************
+
+        '**********************Criticality Part************************
+        If Cells(i, 5).Value = "All_well" Then
+            criticality = 0
+        ElseIf Cells(i, 5).Value = "Major" Then
+            criticality = 1
+        ElseIf Cells(i, 5).Value = "Hazardous" Then
+            criticality = 2
+        ElseIf Cells(i, 5).Value = "Catastrophic" Then
+         criticality = 3
+        End If
+        criticality_final = Application.WorksheetFunction.Bitlshift(criticality, 4)
+        error_code = error_code Or criticality_final
+        '**************************************************************
+
+        '*************************Code part****************************
+        code = Cells(i, 4).Value
+        code_final = Application.WorksheetFunction.Bitlshift(code, 8)
+        error_code = error_code Or code_final
+        '**************************************************************
+
+
+        '*************************LRU part****************************
+        '(contains dummy error names)
+        If Cells(i, 3).Value = "ADU" Then
+            lru = 1
+            Cells(i, 7).Value = "eve_bit_ADU_loss_e"
+        ElseIf Cells(i, 3).Value = "AHRS" Then
+            lru = 2
+            Cells(i, 7).Value = "eve_AHRS1_align_fail_e"
+        ElseIf Cells(i, 3).Value = "GPS" Then
+            lru = 3
+            Cells(i, 7).Value = "eve_GPS_checksum_fail_e"
+        ElseIf Cells(i, 3).Value = "ELEVATOR" Then
+            lru = 4
+            Cells(i, 7).Value = "eve_ELE_degraded_mode_e"
+        ElseIf Cells(i, 3).Value = "AILERON" Then
+            lru = 5
+            Cells(i, 7).Value = "eve_AIL_degraded_mode_e"
+        ElseIf Cells(i, 3).Value = "RUDDER" Then
+            lru = 6
+            Cells(i, 7).Value = "eve_RUD_angle_upper_range_e"
+        ElseIf Cells(i, 3).Value = "MSAP" Then
+            lru = 7
+            Cells(i, 7).Value = "eve_bit_ADU_loss_e"
+        ElseIf Cells(i, 3).Value = "EMS" Then
+            lru = 8
+            Cells(i, 7).Value = "eve_bit_EMS_packet_ID_error_e"
+        ElseIf Cells(i, 3).Value = "ADAHRS" Then
+            lru = 9
+            Cells(i, 7).Value = "eve_ADAHRS_comm_loss_e"
+        End If
+
+        lru_final = Application.WorksheetFunction.Bitlshift(lru, 16)
+        error_code = error_code Or lru_final
+        '**************************************************************
+        
+        
+        '*************************SUB SYSTEM PART**********************
+        If Cells(i, 2).Value = "AFCS" Then
+            sub_system = 1
+        End If
+        
+        sub_system_final = Application.WorksheetFunction.Bitlshift(sub_system, 26)
+        error_code = error_code Or sub_system_final
+        '**************************************************************
+        
+        
+        '*************************SYSTEM PART**************************
+        If Cells(i, 1).Value = "MALE" Then
+            system_code = 1
+        ElseIf Cells(i, 1).Value = "FEMALE" Then
+            system_code = 2
+        End If
+        
+        system_code_final = Application.WorksheetFunction.Bitlshift(system_code, 29)
+        error_code = error_code Or system_code_final
+        '**************************************************************
+        
+
+        '********************FDIR ERROR CODE***************************
+         Cells(i, 11).Value = "0x" & Hex(error_code)
+        '**************************************************************
+        
+        error_code = 0
+
+        '********************FDIR ACTION CODE**************************
+        num = Hex(Cells(i, 8).Value + (2 * Cells(i, 9).Value) + (4 * Cells(i, 10).Value))
+        Cells(i, 12).Value = "0x0000000" & num
+        '**************************************************************
+
+
+        ts.WriteLine Cells(i, 7) & " " & "=" & " " & count & ","
+        ts1.WriteLine "{" & Cells(i, 11) & " " & "," & " " & Cells(i, 12) & "}," & "//" & Cells(i, 7)
+        text = ""
+        count = count + 1
+
+Next i
+
+ts.WriteLine "};"
+ts.WriteLine "}"
+ts.WriteLine "const Uint32_t count=" & count & ";"
+ts.Close
+ts1.WriteLine "};"
+ts1.Close
+
+
+'*******************SAMPLE TRY**************************
+'Dim error, d, f
+'Dim e
+'error = error_code Or (1)
+'d = Application.WorksheetFunction.Bitlshift(2, 4)
+'error = error Or (d)
+'codey = 999
+'e = Application.WorksheetFunction.Bitlshift(codey, 8)
+'error = error Or (e)
+'f = Application.WorksheetFunction.Bitlshift(3, 28)
+'error = error Or (f)
+'
+'Cells(4, 5).Value = "0x" & Hex(error)
+'********************************************************
+Cells(3, 7).Value = Hex(Cells(10, 4).Value)
+
 
 
 End Sub
