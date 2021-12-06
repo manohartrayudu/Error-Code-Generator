@@ -139,3 +139,171 @@ ts1.Close
 
 
 End Sub
+
+
+****************************************************************************************************************
+
+                                    ERROR CODE GENERTION PROGRAM
+                                              METHOD 2
+                                     (using array manipulations)
+
+SUMMARY:
+                               [.] Used array to arrange error_codes
+                               [.] Exponential improvement in execution time
+                               [X] New fields cannot be added easily
+
+****************************************************************************************************************
+
+
+Sub generate_error_code()
+Dim event_type
+Dim criticality
+Dim code
+Dim code_final As String
+Dim lru
+Dim error_code
+Dim arr_error1
+Dim arr_error2
+Dim arr_error_final
+Dim row_start As Integer
+Dim row_end As Integer
+
+Dim col_start As Integer
+Dim col_end As Integer
+Dim i, j As Integer
+
+Dim num
+Dim count As Integer
+
+
+Dim fso As Object, ts As Object
+Set fso = CreateObject("Scripting.FileSystemObject")
+
+Set ts = fso.CreateTextFile("Events_Definitions.h")
+ts.WriteLine "#include <Common_Definitions.h>"
+ts.WriteLine "namespace fdir_ident_t"
+ts.WriteLine "{"
+ts.WriteLine "enum fdir_events_t{"
+Set ts1 = fso.CreateTextFile("Map_Actions.h")
+ts1.WriteLine "#include <Events_Definitions.h>"
+ts1.WriteLine "Uint32_t error_code_and_action[count][2]={"
+
+
+
+row_start = 10
+row_end = 15
+
+
+
+For i = row_start To row_end
+        '*************************LRU part****************************
+        If Cells(i, 1).Value = "ADU" Then
+            lru = Hex(1)
+        ElseIf Cells(i, 1).Value = "AHRS" Then
+            lru = Hex(2)
+        ElseIf Cells(i, 1).Value = "GPS" Then
+            lru = Hex(3)
+        ElseIf Cells(i, 1).Value = "ELEVATOR" Then
+            lru = Hex(4)
+        ElseIf Cells(i, 1).Value = "AILERON" Then
+            lru = Hex(5)
+        ElseIf Cells(i, 1).Value = "RUDDER" Then
+            lru = Hex(6)
+        ElseIf Cells(i, 1).Value = "MSAP" Then
+            lru = Hex(7)
+        ElseIf Cells(i, 1).Value = "EMS" Then
+            lru = Hex(8)
+        ElseIf Cells(i, 1).Value = "ADHRS" Then
+            lru = Hex(9)
+        End If
+        '**************************************************************
+
+        '*************************Code part****************************
+        code = Hex(Cells(i, 2).Value)
+        If Len(code) <= 5 Then
+            If Len(code) = 1 Then
+                code_final = "0000" & code
+            ElseIf Len(code) = 2 Then
+                code_final = "000" & code
+            ElseIf Len(code) = 3 Then
+                code_final = "00" & code
+            ElseIf Len(code) = 4 Then
+                code_final = "0" & code
+            ElseIf Len(code) = 5 Then
+                code_final = "" & code
+            End If
+        End If
+        '**************************************************************
+
+        '**********************Criticality Part************************
+        If Cells(i, 3).Value = "All_well" Then
+            criticality = Hex(0)
+        ElseIf Cells(i, 3).Value = "Major" Then
+            criticality = Hex(1)
+        ElseIf Cells(i, 3).Value = "Hazardous" Then
+            criticality = Hex(2)
+        ElseIf Cells(i, 3).Value = "Catastrophic" Then
+         criticality = Hex(3)
+        End If
+        '**************************************************************
+
+        '*********************Events Part******************************
+        If Cells(i, 4).Value = "M-event" Then
+            event_type = Hex(1)
+        ElseIf Cells(i, 4).Value = "I-event" Then
+            event_type = Hex(2)
+        ElseIf Cells(i, 4).Value = "R-event" Then
+            event_type = Hex(4)
+        End If
+        '**************************************************************
+
+        '********************FDIR ERROR CODE***************************
+        arr_error1 = Array(lru, code_final, criticality, event_type)
+        arr_error2 = Join(arr_error1, "")
+        arr_error_final = "0x" & arr_error2
+        Cells(i, 9).Value = arr_error_final
+        arr_error_final = ""
+        '**************************************************************
+
+        '********************FDIR ACTION CODE**************************
+        num = Hex(Cells(i, 6).Value + (2 * Cells(i, 7).Value) + (4 * Cells(i, 8).Value))
+        Cells(i, 10).Value = "0x0000000" & num
+        '**************************************************************
+
+
+
+        ts.WriteLine Cells(i, 5) & " " & "=" & " " & count & ","
+        ts1.WriteLine "{" & Cells(i, 9) & " " & "," & " " & Cells(i, 10) & "}," & "//" & Cells(i, 5)
+        text = ""
+        count = count + 1
+
+Next i
+
+ts.WriteLine "};"
+ts.WriteLine "}"
+ts.WriteLine "const Uint32_t count=" & count & ";"
+ts.Close
+ts1.WriteLine "};"
+ts1.Close
+
+'Dim a, b, c
+'a = 4
+'b = 2^4
+'
+'c = a * b
+
+Dim a, b As Integer
+Dim c
+a = 12
+b = Application.WorksheetFunction.Bitlshift(a, 4)
+c = Hex(a)
+
+Cells(35, 1).Value = a
+Cells(36, 1).Value = b
+Cells(37, 1).Value = c
+
+
+
+
+
+End Sub
