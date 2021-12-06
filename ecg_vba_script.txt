@@ -1,0 +1,141 @@
+****************************************************************************************************************
+
+                                    ERROR CODE GENERTION PROGRAM
+                                              METHOD 1
+                             (executing the code externally - using a c++ file)
+
+
+
+****************************************************************************************************************
+
+
+Sub GET_ERROR_CODE()
+Dim fileReader As String
+Dim RetVal
+Dim str_out As String
+Dim exe_path As String
+Dim myFile As String, text As String, textline As String
+Dim myFile2 As String
+Dim rng As Range, cell As Range
+Dim str(4) As String
+Dim i As Integer
+Dim j As Integer
+Dim row_start As Integer
+Dim row_end As Integer
+Dim col_start As Integer
+Dim col_end As Integer
+Dim count As Integer
+
+
+Dim fso As Object, ts As Object
+Set fso = CreateObject("Scripting.FileSystemObject")
+
+Set ts = fso.CreateTextFile("C:\Users\kvkanumuri\Desktop\macro\file_A.h")
+ts.WriteLine "#include <Common_Definitions.h>"
+ts.WriteLine "namespace fdir_ident_t"
+ts.WriteLine "{"
+ts.WriteLine "enum fdir_events_t{"
+Set ts1 = fso.CreateTextFile("C:\Users\kvkanumuri\Desktop\macro\file_B.h")
+ts1.WriteLine "#include <file_A.h>"
+ts1.WriteLine "Uint32_t error_code_and_action[count][2]={"
+
+
+Dim i2 As Integer
+Dim j2 As Integer
+Dim num2 As Integer
+Dim index As Integer
+Dim row_start2 As Integer
+Dim row_end2 As Integer
+Dim col_start2 As Integer
+Dim col_end2 As Integer
+Dim str2(3) As Integer
+Dim str_out2 As String
+
+Dim k As Integer
+Dim h As Integer
+Dim t As Integer
+
+
+myFile = "C:\Users\kvkanumuri\Documents\error_code_input.txt"
+
+
+
+row_start = 10
+row_end = 16
+
+col_start = 1
+col_end = 4
+
+col_start2 = 6
+col_end2 = 8
+
+count = 0
+num2 = 0
+
+For i = row_start To row_end
+    For j = col_start To col_end
+        str(col_end - 1 - j + 1) = Cells(i, j).Value
+    Next j
+
+    str_out = " " & str(0) & "," & str(1) & "," & str(2) & "," & str(3)
+
+
+    exe_path = "C:\Users\kvkanumuri\Desktop\macro\h.exe"
+    exe_path = exe_path & " "
+    exe_path = exe_path & str_out
+
+    RetVal = Shell(exe_path, 2)
+
+
+    'Application.Wait (Now + TimeValue("0:00:1"))
+    Application.Wait (Now + 0.00001)
+'    For k = 0 To 500
+'        For h = 0 To 100
+'            For t = 0 To 100
+'            Next t
+'        Next h
+'    Next k
+
+
+    Open myFile For Input As #1
+    'text = ""
+    Do Until EOF(1)
+        Line Input #1, textline
+        text = text & textline
+    Loop
+
+    Close #1
+
+    Cells(i, 9).Value = text
+
+
+    index = 0
+    For j2 = col_start2 To col_end2
+        str2(index) = Cells(i, j2).Value
+        index = index + 1
+    Next j2
+
+    num2 = (str2(0) + 2 * str2(1) + 4 * str2(2))
+    str_out2 = "0x0000000" & Hex(num2)
+    Cells(i, 10).Value = str_out2
+
+
+    ts.WriteLine Cells(i, 5) & " " & "=" & " " & count & ","
+    ts1.WriteLine "{" & Cells(i, 9) & " " & "," & " " & Cells(i, 10) & "}," & "//" & Cells(i, 5)
+    text = ""
+    count = count + 1
+
+
+Next i
+
+ts.WriteLine "};"
+ts.WriteLine "}"
+ts.WriteLine "const Uint32_t count=" & count & ";"
+ts.Close
+ts1.WriteLine "};"
+ts1.Close
+
+
+
+
+End Sub
